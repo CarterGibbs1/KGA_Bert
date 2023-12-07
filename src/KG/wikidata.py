@@ -18,6 +18,7 @@ VEC_PATH = r"D:\SDS\KGA_Bert\data\KG_data\wikidata_translation_v1_vectors.npy\wi
 LABEL_EMBEDDING_PATH = r'D:\SDS\KGA_Bert\data\KG_data\english_labels.tsv'
 DATA_TRAIN_PATH = r'D:\SDS\KGA_Bert\data\glue_data\SST-2\train.tsv'
 DATA_TEST_PATH = r'D:\SDS\KGA_Bert\data\glue_data\SST-2\dev.tsv'
+CSV_FILE_PATH = r'D:\SDS\KGA_Bert\data\KG_data\out.csv'
 
 def get_nouns(sentence):
     tokens = nltk.word_tokenize(sentence)
@@ -86,11 +87,13 @@ def bfs(noun):
         seen.add(ent)
         try:
             if isinstance(ent, Entity) and contains(str(ent.label)):
-                if level not in averages:
-                    averages[level] = get_val(ent)
+                if level == 0:
+                    for i in range(3):
+                        averages[i] = get_val(ent)
+                        num_elems[i] += 1
                 else:
                     averages[level] += get_val(ent)
-                num_elems[level] += 1
+                    num_elems[level] += 1
 
                 e = list(client.get(ent.id).values())[:min(len(e), 20)]
                 for ent in e:
@@ -120,4 +123,4 @@ for noun in tqdm(list(nouns_with_embeddings)):
         continue
     embeddings_dict[noun.lower()] = [entities[0], entities[1], entities[2]]
 
-pd.DataFrame.from_dict(embeddings_dict, orient='index', columns=['1', '2', '3']).to_csv()
+pd.DataFrame.from_dict(embeddings_dict, orient='index', columns=['1', '2', '3']).to_csv(CSV_FILE_PATH)
