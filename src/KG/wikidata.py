@@ -1,4 +1,6 @@
 import nltk
+#import sys     # uncomment these lines if importing packages are weird. Also update paths
+#sys.path.insert(0, r'c:\users\carte\appdata\local\programs\python\python310\lib\site-packages')
 from wikidata.client import Client
 from wikidata.entity import Entity
 from collections import deque
@@ -11,7 +13,12 @@ nltk.download('averaged_perceptron_tagger')
 
 MAX_LEVEL = 2
 
-text = "Home of Mark Zuckerberg is great!"
+# UPDATE PATHS HERE
+VEC_PATH = r"D:\SDS\KGA_Bert\data\KG_data\wikidata_translation_v1_vectors.npy\wiki_trans_v1_vec.npy"
+LABEL_EMBEDDING_PATH = r'D:\SDS\KGA_Bert\data\KG_data\english_labels.tsv'
+DATA_TRAIN_PATH = r'D:\SDS\KGA_Bert\data\glue_data\SST-2\train.tsv'
+DATA_TEST_PATH = r'D:\SDS\KGA_Bert\data\glue_data\SST-2\dev.tsv'
+
 def get_nouns(sentence):
     tokens = nltk.word_tokenize(sentence)
     tags = nltk.pos_tag(tokens)
@@ -32,7 +39,7 @@ def get_wikidata_id(item):
     except:
         return None
 
-embeddings_np = np.load(r"D:\SDS\KGA_Bert\data\KG_data\wikidata_translation_v1_vectors.npy\wiki_trans_v1_vec.npy")
+embeddings_np = np.load(VEC_PATH)
 
 def get_training_embeddings(labels_file):
 
@@ -51,7 +58,7 @@ def get_training_embeddings(labels_file):
             retVal[curr_label] = embeddings_np[line_num]
     return retVal
 
-label_to_embedding = get_training_embeddings(r'D:\SDS\KGA_Bert\data\KG_data\english_labels.tsv')
+label_to_embedding = get_training_embeddings(LABEL_EMBEDDING_PATH)
 
 def contains(noun):
     return noun.title() in label_to_embedding or noun.lower() in label_to_embedding or noun.upper() in label_to_embedding
@@ -90,10 +97,10 @@ def bfs(noun):
                     q.append((ent, level + 1))
         except:
             continue
-    return {level : np.vectorize(lambda vals : round(vals, 4))(averages[level] / num_elems[level]) for level in range(3)}
+    return None if 0 not in averages else {level : np.vectorize(lambda vals : round(vals, 4))(averages[level] / num_elems[level]) for level in range(3)}
 
-data_train = pd.read_csv(r'D:\SDS\KGA_Bert\data\glue_data\SST-2\train.tsv', sep='\t', header=0)
-data_test = pd.read_csv(r'D:\SDS\KGA_Bert\data\glue_data\SST-2\dev.tsv', sep='\t', header=0)
+data_train = pd.read_csv(DATA_TRAIN_PATH, sep='\t', header=0)
+data_test = pd.read_csv(DATA_TEST_PATH, sep='\t', header=0)
 
 nouns = set()
 for sentence in data_train['sentence']:
@@ -109,10 +116,8 @@ nouns_with_embeddings = {word for word in nouns if word in label_to_embedding}
 embeddings_dict = {}
 for noun in tqdm(list(nouns_with_embeddings)):
     entities = bfs(noun)
+    if not entities:
+        continue
     embeddings_dict[noun.lower()] = [entities[0], entities[1], entities[2]]
 
 pd.DataFrame.from_dict(embeddings_dict, orient='index', columns=['1', '2', '3']).to_csv()
-
-
-
-
